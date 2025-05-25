@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo da Reciclagem</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+      background: linear-gradient(to bottom, #a0d8ef, #e0f7fa);
+    }
+    #start-screen, #game-over-screen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    h1 {
+      font-size: 3em;
+      color: #2e7d32;
+    }
+    p {
+      font-size: 1.2em;
+      color: #333;
+      max-width: 400px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 1.2em;
+      border: none;
+      background-color: #2e7d32;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #1b5e20;
+    }
+  </style>
+</head>
+<body>
+  <div id="start-screen">
+    <h1>Jogo da Reciclagem</h1>
+    <p>Toque no canto esquerdo ou direito da tela (ou use as setas no PC) para mover a lixeira e pegar o máximo de lixo possível!</p>
+    <button onclick="startGame()">Iniciar</button>
+  </div>
+
+  <div id="game-over-screen" style="display:none">
+    <h1>Fim de Jogo!</h1>
+    <p>Sua pontuação foi: <span id="final-score">0</span></p>
+    <button onclick="restartGame()">Jogar Novamente</button>
+  </div>
+
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let gameInterval;
+    let score = 0;
+    let binX = 160;
+    let binSpeed = 8;
+    let lixoList = [];
+    let gameRunning = false;
+    let timeLeft = 60;
+
+    const binImg = new Image();
+    binImg.src = "https://e7.pngegg.com/pngimages/74/731/png-clipart-rubbish-bins-waste-paper-baskets-open-trash-can-waste-waste-containment-thumbnail.png";
+
+    const lixosData = [
+      "https://assets.stickpng.com/images/5c434c10e39d5d01c21da943.png", // papel amassado
+      "https://cdn-icons-png.flaticon.com/512/5386/5386124.png",        // vidro quebrado
+      "https://png.pngtree.com/png-clipart/20231118/original/pngtree-broken-beer-bottle-shard-picture-image_13267265.png", // garrafa quebrada
+      
+      
+    ];
+
+    function drawBin() {
+      ctx.drawImage(binImg, binX, 530, 80, 60);
+    }
+
+    function drawLixos() {
+      lixoList.forEach(lixo => {
+        let img = new Image();
+        img.src = lixo.img;
+        ctx.drawImage(img, lixo.x, lixo.y, 40, 40);
+      });
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBin();
+      drawLixos();
+
+      lixoList.forEach(lixo => lixo.y += 4);
+
+      lixoList = lixoList.filter(lixo => {
+        if (lixo.y > 520 && lixo.y < 600 && lixo.x > binX - 20 && lixo.x < binX + 80) {
+          score += 20;
+          timeLeft += 2;
+          return false;
+        } 
+        if (lixo.y > 600) {
+          timeLeft -= 2;
+          return false;
+        }
+        return true;
+      });
+
+      // Pontuação e tempo
+      ctx.fillStyle = "#000";
+      ctx.font = "20px Arial";
+      ctx.fillText("Pontuação: " + score, 10, 30);
+      ctx.fillText("Tempo: " + timeLeft.toFixed(1) + "s", 280, 30);
+
+      if (timeLeft <= 0) {
+        endGame();
+        return;
+      }
+
+      if (Math.random() < 0.03) spawnLixo();
+
+      timeLeft -= 1 / 30;
+    }
+
+    function spawnLixo() {
+      let img = lixosData[Math.floor(Math.random() * lixosData.length)];
+      lixoList.push({ img: img, x: Math.random() * 360, y: -40 });
+    }
+
+    function startGame() {
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("game-over-screen").style.display = "none";
+      score = 0;
+      lixoList = [];
+      binX = 160;
+      timeLeft = 60;
+      gameRunning = true;
+      gameInterval = setInterval(update, 1000 / 30);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      gameRunning = false;
+      document.getElementById("final-score").innerText = score;
+      document.getElementById("game-over-screen").style.display = "flex";
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    document.addEventListener("keydown", e => {
+      if (!gameRunning) return;
+      if (e.key === "ArrowLeft" && binX > 0) binX -= binSpeed;
+      if (e.key === "ArrowRight" && binX < 320) binX += binSpeed;
+    });
+
+    canvas.addEventListener("touchstart", e => {
+      if (!gameRunning) return;
+      let touchX = e.touches[0].clientX;
+      if (touchX < canvas.width / 2 && binX > 0) binX -= binSpeed;
+      else if (touchX >= canvas.width / 2 && binX < 320) binX += binSpeed;
+    });
+  </script>
+</body>
+</html>
